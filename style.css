@@ -1,0 +1,107 @@
+div.rrdImage
+{
+	clear: both;	
+}
+
+div.rrdImage ul.rrdTabBar
+{
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+
+div.rrdImage div.rrdClearFloat
+{
+    height: 0;
+    clear: both;
+    visibility: hidden;
+}
+
+div.rrdImage select
+{
+	display: none;
+}
+
+div.rrdImage ul.rrdTabBar li
+{
+	border-style: solid solid none solid;
+	border-width: 1px;
+	border-color: #F0F0F0;
+	float: left;
+	margin: 0 2px 0 2px;
+	padding: 0 0.25em 0 0.25em;
+	
+	background-color: #F4F4F4;
+}
+
+div.rrdImage ul.rrdTabBar li:hover
+{
+	background-color: white;
+}
+
+div.rrdImage ul.rrdTabBar li a
+{
+	color: #A0A0A0;
+}
+
+div.rrdImage ul.rrdTabBar li a:hover, ul.rrdTabBar li a:focus
+{
+	text-decoration: none;
+}
+
+
+div.rrdImage ul.rrdTabBar li.rrdActiveTab {
+	border-color: #C0C0C0;
+	background-color: #C0C0C0;
+}
+
+div.rrdImage ul.rrdTabBar li.rrdActiveTab a {
+	color: white;
+	font-weight: bold;
+}
+
+
+div.rrdImage div.rrdGangCheckbox
+{
+	float:right;
+}
+
+div.rrdImage div.rrdGangCheckbox
+{
+	background-image: url(images/ganged.gif);
+	background-position: center left;
+	background-repeat: no-repeat;
+	padding-left: 15px;
+}
+
+div.rrdImage {
+	position: relative;
+}
+
+div.rrdImage img.rrdLoading {
+	opacity: 0.25;
+}
+
+div.rrdImage div.rrdLoader {	
+	height: 3px;
+	width: 100%;
+	position: absolute;
+	display: none;
+	visibility: hidden;
+	
+	background-image: url(images/waitbar.gif);
+	background-repeat: repeat-x;
+	
+	background-color: #C0C0C0;
+}
+
+div.rrdImage div.rrdLoaderActive {
+	display: block;
+	visibility: visible;
+}
+
+@media (max-width: 960px)
+{
+  div.rrdImage ul.rrdTabBar { display: none; }
+  div.rrdImage select { display: inline-block; }
+}
