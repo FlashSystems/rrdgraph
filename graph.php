@@ -2,7 +2,7 @@
 /**
  * RRDGraph Plugin: Graph generator
  * 
- * @author Daniel Goß <developer@flashsystems.de>
+ * @author Daniel Goï¿½ <developer@flashsystems.de>
  * @license MIT
  */
 
@@ -30,7 +30,7 @@ try {
     //-- ACL-Check
     if (auth_quickaclcheck($pageId) < AUTH_READ) throw new Exception("Access denied by ACL.");
     
-    //-- Currently only fs and e are supported moeds.
+    //-- Currently only fs and e are supported modes.
     if ($mode != 'fs') $mode = 'e';
     
     //-- Load the rrdgraph helper. This helper contains the cache manager and other stuff used here.
@@ -40,6 +40,10 @@ try {
     //-- Check if the cached image is still valid. If this is not the case, recreate it.
     $cacheInfo = $rrdGraphHelper->getImageCacheInfo($pageId, $graphId, $rangeNr, $mode);
     if (! $cacheInfo->isValid()) {
+        
+        //-- We found we should update the file. Upgrade our lock to an exclusive one.
+        //   This way we OWN the lockfile and nobody else can get confused while we do our thing.
+        $cacheInfo->upgradeLock();
         
         $recipe = $rrdGraphHelper->fetchRecipe($pageId, $graphId);
         if ($recipe === null) throw new Exception("The graph " . $graphId . " is not defined on page " . $pageId);
@@ -137,12 +141,17 @@ try {
         }
         
         //-- Correct the filename of the graph in case the rangeNr was modified by the range check.
+        unset($cacheInfo);
         $cacheInfo = $rrdGraphHelper->getImageCacheInfo($pageId, $graphId, $rangeNr, $mode);
         
+        //-- We've to reupgrade the lock, because we got a new cacheInfo instance.
+        $cacheInfo->UpgradeLock();
+        
         //-- Render the RRD-Graph
-        if (rrd_graph($cacheInfo->getFilename(), array_merge($commandLine, $graphCommands)) === false) {throw new Exception(rrd_error());}
+        if (rrd_graph($cacheInfo->getFilename(), array_merge($commandLine, $graphCommands)) === false) throw new Exception(rrd_error());
         
         //-- Get the new cache info of the image to send the correct headers.
+        unset($cacheInfo);
         $cacheInfo = $rrdGraphHelper->getImageCacheInfo($pageId, $graphId, $rangeNr, $mode);
     }
     
@@ -165,3 +174,5 @@ try {
 catch (Exception $ex) {
     ErrorImage::outputErrorImage("Graph generation failed", $ex->getMessage());
 }
+
+if (isset($cacheInfo)) unset($cacheInfo);

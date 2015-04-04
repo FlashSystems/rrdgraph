@@ -2,7 +2,7 @@
 /**
  * RRDGraph Plugin: Helper classes
  * 
- * @author Daniel Goß <developer@flashsystems.de>
+ * @author Daniel Goï¿½ <developer@flashsystems.de>
  * @license MIT
  */
 
@@ -158,6 +158,9 @@ class cache_rrdgraphimage extends cache_rrdgraphbase {
 class rrdgraph_image_info {
 	/** @var String Name of the rrd image file within the cache. */
     private $fileName;
+    
+    /** @var Resource File handle used to lock the file. */
+    private $fileHandle;
 
     /** @var Integer Timestamp until the file named by $fileName ist considered valid. */
     private $validUntil;
@@ -175,6 +178,17 @@ class rrdgraph_image_info {
         $this->fileName = $fileName;
         $this->validUntil = $validUntil;
         $this->lastModified = $lastModified;
+        
+        //-- Get a shared lock on the lock-file.
+        $this->fileHandle = fopen($fileName . ".lock", "w+");
+        flock($this->fileHandle, LOCK_SH);
+    }
+    
+    /**
+     * D'tor
+     */
+    public function __destruct() {
+        fclose($this->fileHandle);
     }
 
     /**
@@ -204,6 +218,10 @@ class rrdgraph_image_info {
      */
     public function isValid() {
         return $this->validUntil > time();
+    }
+    
+    public function upgradeLock() {
+        flock($this->fileHandle, LOCK_EX);
     }
 }
 
