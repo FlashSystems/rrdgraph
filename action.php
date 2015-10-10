@@ -2,7 +2,7 @@
 /**
  * RRDGraph Plugin: Action Plugin
  *
- * @author Daniel Goﬂ <developer@flashsystems.de>
+ * @author Daniel Go√ü <developer@flashsystems.de>
  * @license MIT
  */
 

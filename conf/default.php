@@ -2,7 +2,7 @@
 /**
  * RRDGraph Plugin: Default settings
  *
- * @author Daniel Go� <developer@flashsystems.de>
+ * @author Daniel Goß <developer@flashsystems.de>
  * @license MIT
  */
 
