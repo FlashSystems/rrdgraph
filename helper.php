@@ -12,7 +12,7 @@
  * It implements the dependency handling mechanism that is needed for the
  * rrd INCLUDE tag.
  */
-class cache_rrdgraphbase extends cache {
+abstract class cache_rrdgraphbase extends cache {
 	/** @var String Page-Number of the page that is managed by this cache instance. */
     private $pageId;
     
@@ -26,7 +26,7 @@ class cache_rrdgraphbase extends cache {
      * @param String $key Uniq value identifying the cached content on the page provied by $pageId. The identifier is hashed before being used.
      * @param String $ext The extension of the cache file.
      */
-    protected function __construct($pluginName, $pageId, $key, $ext) {
+    public function __construct($pluginName, $pageId, $key, $ext) {
         $this->pageId = $pageId;
         $this->pluginName = $pluginName;
         
