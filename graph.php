@@ -124,6 +124,11 @@ try {
                 
                 break;
                 
+            //-- The XPORT-Keyword is not allowed.
+            case 'XPORT':
+                throw new Exception("The XPORT statement must no be used. Use BDEF instead.");
+                break;
+                
             //-- INCLUDE:[Wiki Page]>[Template]
             case 'INCLUDE' :
                 throw new Exception("Recursive inclusion detected. Only graphs can contain inclusions.");
