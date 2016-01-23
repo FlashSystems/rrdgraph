@@ -6,6 +6,11 @@
  * @license MIT
  */
 
+/**
+ * Simple RPN parser used for rrdgraph rules.
+ * @author dgoss
+ *
+ */
 class RPNComputer {
     /**
      * Contains the constants that are passed to addConst.

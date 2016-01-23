@@ -9,10 +9,17 @@
 if (! defined('DOKU_INC')) define('DOKU_INC', realpath(dirname(__FILE__) . '/../../../') . '/');
 define('DOKU_DISABLE_GZIP_OUTPUT', 1);
 
+//-- Global constants
+const MODE_GRAPH_EMBEDDED = 'e';
+const MODE_GRAPH_FULLSCREEN = 'fs';
+const MODE_BINDSVG = 'b';
+
 //-- Initialize DokuWiki's core
 require_once (DOKU_INC . 'inc/init.php');
 require_once ("inc/errorimage.php");
 require_once ("inc/rpncomputer.php");
+require_once ("inc/svgbinding.php");
+require_once ("inc/contenttypes.php");
 
 //-- Close the currently open session. We don't need it here.
 session_write_close();
@@ -25,20 +32,27 @@ try {
     $pageId = getId('page');
     $graphId = $INPUT->str('graph');
     $rangeNr = $INPUT->int('range', 0, true);
-    $mode = $INPUT->str('mode', 'e');
+    $mode = $INPUT->str('mode', MODE_GRAPH_EMBEDDED, true);
+    $bindingSource = $INPUT->str('bind');
     
     //-- ACL-Check
     if (auth_quickaclcheck($pageId) < AUTH_READ) throw new Exception("Access denied by ACL.");
     
-    //-- Currently only fs and e are supported modes.
-    if ($mode != 'fs') $mode = 'e';
+    //-- Currently only fs, b and e are supported modes.
+    if (($mode != MODE_GRAPH_FULLSCREEN) && ($mode != MODE_BINDSVG)) $mode = MODE_GRAPH_EMBEDDED;
+    
+    //-- If the mode is "b" then $bindingSource must be set and accessible
+    if ($mode == MODE_BINDSVG) {
+        if ($bindingSource == null) throw new Exception("Binding source missing.");
+        if (auth_quickaclcheck($bindingSource) < AUTH_READ) throw new Exception("Access denied by ACL.");
+    }
     
     //-- Load the rrdgraph helper. This helper contains the cache manager and other stuff used here.
     $rrdGraphHelper = &plugin_load('helper', 'rrdgraph');
     if ($rrdGraphHelper === null) throw new Exception("rrdgraph helper not found.");
     
     //-- Check if the cached image is still valid. If this is not the case, recreate it.
-    $cacheInfo = $rrdGraphHelper->getImageCacheInfo($pageId, $graphId, $rangeNr, $mode);
+    $cacheInfo = $rrdGraphHelper->getImageCacheInfo($pageId, $graphId, ($mode == MODE_BINDSVG)?"svg":"png", $rangeNr, $mode);
     if (! $cacheInfo->isValid()) {
         
         //-- We found we should update the file. Upgrade our lock to an exclusive one.
@@ -55,13 +69,14 @@ try {
         $rpncomp = new RPNComputer();
         $rpncomp->addConst("true", true);
         $rpncomp->addConst("false", false);
-        $rpncomp->addConst("fullscreen", $mode == 'fs');
+        $rpncomp->addConst("fullscreen", $mode == MODE_GRAPH_FULLSCREEN);
         $rpncomp->addConst("range", $rangeNr);
         $rpncomp->addConst("page", $pageId);
         
         $options = array ();
         $graphCommands = array ();
         $ranges = array ();
+        if ($mode == MODE_BINDSVG) $svgBinding = new SvgBinding(); 
         foreach ($recipe as $element) {
             
             //-- If a condition was supplied, check it.
@@ -73,11 +88,12 @@ try {
             switch (strtoupper($element[1])) {
             //-- RANGE:[Range Name]:[Start time]:[End time]
             case 'RANGE' :
+                if (($mode == MODE_BINDSVG) && (count($ranges) == 1)) throw new Exception("For SVG binding only one RANGE can be specified.");
                 $parts = explode(':', $element[2], 3);
                 if (count($parts) == 3) $ranges[] = $parts;
                 break;
             
-            //-- OPT:[Option]=[Optinal Value]
+            //-- OPT:[Option]=[Optinal value]
             case 'OPT' :
                 $parts = explode('=', $element[2], 2);
                 $key = trim($parts[0]);
@@ -89,9 +105,28 @@ try {
                     $options[$key] = $value;
                 
                 break;
+                
+            //-- BDEF:[Binding]=[Variable]:[Aggregation function]
+            case 'BDEF':
+                if ($mode != MODE_BINDSVG) throw new Exception("BDEF only allowed if the recipe is used for binding.");
+                $parts = explode('=', $element[2], 2);
+                if (count($parts) != 2) throw new Exception("BDEF is missing r-value.");
+                $rparts = explode(':', $parts[1], 2);
+                if (count($rparts) != 2) throw new Exception("BDEF is missing aggregation function");
+                $binding = $parts[0];
+                $variable = $rparts[0];
+                $aggFkt = $rparts[1];
+                
+                //-- Put the binding into the list of the SvgBinding class and output an XPORT command
+                //   for RRDtool to export the used variable.
+                $svgBinding->setAggregate($binding, $aggFkt);
+                $graphCommands[] = "XPORT:" . $variable . ':' . $binding;
+                
+                break;
+                
             //-- INCLUDE:[Wiki Page]>[Template]
             case 'INCLUDE' :
-                throw new Exception("Recursive inclusion detected. Only graphs can contain inclustion.");
+                throw new Exception("Recursive inclusion detected. Only graphs can contain inclusions.");
                 break;
             
             default :
@@ -116,12 +151,17 @@ try {
         $options = array_diff_key($options, array_flip($badOptions));
         
         //-- Set/overwrite some of the options
-        $options['imgformat'] = 'PNG';
         $options['start'] = $ranges[$rangeNr][1];
         $options['end'] = $ranges[$rangeNr][2];
-        $options['999color'] = "SHADEA#C0C0C0";
-        $options['998color'] = "SHADEB#C0C0C0";
-        $options['border'] = 1;
+        
+        //-- If we're not only doing SVG-Binding some more defaults have to be set.
+        if ($mode != MODE_BINDSVG)
+        {
+            $options['imgformat'] = 'PNG';
+            $options['999color'] = "SHADEA#C0C0C0";
+            $options['998color'] = "SHADEB#C0C0C0";
+            $options['border'] = 1;
+        }
         
         //-- Encode the options
         $commandLine = array ();
@@ -142,26 +182,40 @@ try {
         
         //-- Correct the filename of the graph in case the rangeNr was modified by the range check.
         unset($cacheInfo);
-        $cacheInfo = $rrdGraphHelper->getImageCacheInfo($pageId, $graphId, $rangeNr, $mode);
+        $cacheInfo = $rrdGraphHelper->getImageCacheInfo($pageId, $graphId, ($mode == MODE_BINDSVG)?"svg":"png", $rangeNr, $mode);
         
         //-- We've to reupgrade the lock, because we got a new cacheInfo instance.
         $cacheInfo->UpgradeLock();
         
-        //-- Render the RRD-Graph
-        if (rrd_graph($cacheInfo->getFilename(), array_merge($commandLine, $graphCommands)) === false) throw new Exception(rrd_error());
+        //-- Depending on the current mode create a new PNG or SVG image.
+        switch ($mode) {
+        case MODE_GRAPH_EMBEDDED:
+        case MODE_GRAPH_FULLSCREEN:
+            //-- Render the RRD-Graph
+            if (rrd_graph($cacheInfo->getFilename(), array_merge($commandLine, $graphCommands)) === false) throw new Exception(rrd_error());
+            break;
+            
+        case MODE_BINDSVG:
+            $bindingSourceFile = mediaFN(cleanID($bindingSource));
+            $svgBinding->createSVG($cacheInfo->getFileName(), array_merge($commandLine, $graphCommands), $bindingSourceFile);
+            break;
+        }
         
         //-- Get the new cache info of the image to send the correct headers.
         unset($cacheInfo);
-        $cacheInfo = $rrdGraphHelper->getImageCacheInfo($pageId, $graphId, $rangeNr, $mode);
+        $cacheInfo = $rrdGraphHelper->getImageCacheInfo($pageId, $graphId, ($mode == MODE_BINDSVG)?"svg":"png", $rangeNr, $mode);
     }
     
     if (is_file($cacheInfo->getFilename())) {
         // -- Output the image. The content length is determined via the output buffering because
         // on newly generated images (and with the cache on some non standard filesystem) the
-        // size given by filesize is incorrect.
-        header("Content-Type: image/png");
-        header('Expires: ' . gmdate('D, d M Y H:i:s', $cacheInfo->getValidUntil()) . " GMT");
-        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $cacheInfo->getLastModified()) . " GMT");
+        // size given by filesize is incorrect
+        $contentType = ContentType::get_content_type($cacheInfo->getFilename());
+        if ($contentType === null) throw new Exception("Unexpected file extension.");
+        header("Content-Type: " . $contentType);
+        
+        header('Expires: ' . gmdate('D, d M Y H:i:s', $cacheInfo->getValidUntil()) . ' GMT');
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $cacheInfo->getLastModified()) . ' GMT');
         
         ob_start();
         readfile($cacheInfo->getFilename());

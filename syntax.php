@@ -17,6 +17,8 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
     const RT_GRAPH = 0;
     /** Constant that indicates that a recipe is used for inclusion in other recipes. */
     const RT_TEMPLATE = 1;
+    /** Constant that indicates that a recipe is used for a bound svg graphics. */
+    const RT_BOUNDSVG = 2;
 
     /** Array index of the graph type within the parsed recipe. */ 
     const R_TYPE = 'type';
@@ -28,6 +30,8 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
     const R_DATA = 'data';
     /** Array index of the ganged flag within the parsed recipe. */
     const R_GANGED = 'ganged';
+    /** Array index of the name of the bound svg file if the parsed recipe is of type RT_BOUNDSVG. */
+    const R_BSOURCE = 'bsource';
 
     /**
      * Stores the rrd recipe while it's parsed. This variable is reset every time a new recipe starts.
@@ -177,7 +181,7 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
         
         $attributes = array ();
         
-        if (($numMatches = preg_match_all('/([[:alpha:]]+)[[:space:]]*=[[:space:]]*[\'"]?([[:alnum:]]+)[\'"]?/', $matches[1], $parts, PREG_SET_ORDER)) > 0) {
+        if (($numMatches = preg_match_all('/([[:alpha:]]+)[[:space:]]*=[[:space:]]*[\'"]?([[:alnum:]:.-_]+)[\'"]?/', $matches[1], $parts, PREG_SET_ORDER)) > 0) {
             foreach ($parts as $part) {
                 $key = strtolower(trim($part[1]));
                 $value = trim($part[2]);
@@ -216,7 +220,7 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
      * @param Doku_Handler $handler The handler
      * @return Array Data for the renderer
      */
-    public function handle($match, $state, $pos, Doku_Handler &$handler) {
+    public function handle($match, $state, $pos, Doku_Handler $handler) {
         //-- Do not handle comments!
         if (isset($_REQUEST['comment'])) return false;
         
@@ -233,6 +237,11 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
                 $this->rrdRecipe[self::R_NAME] = $attributes['template'];
                 $this->rrdRecipe[self::R_SHOW] = $this->parseBoolean($attributes['show']);
                 $this->rrdRecipe[self::R_GANGED] = false;
+            } else if (array_key_exists("bind", $attributes)) {
+                $this->rrdRecipe[self::R_TYPE] = self::RT_BOUNDSVG;
+                $this->rrdRecipe[self::R_SHOW] = true;  // Bound SVG images will never be ganged and always visible.
+                $this->rrdRecipe[self::R_GANGED] = false;
+                $this->rrdRecipe[self::R_BSOURCE] = $attributes['bind'];
             } else {
                 $this->rrdRecipe[self::R_TYPE] = self::RT_GRAPH;
                 // The name if left empty. In this case it will be set by DOKU_LEXER_EXIT. 
@@ -274,7 +283,7 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
      * @param Array $data The data from the handler() function
      * @return boolean If rendering was successful.
      */
-    public function render($mode, Doku_Renderer &$renderer, $data) {
+    public function render($mode, Doku_Renderer $renderer, $data) {
         global $ID;
         
         //-- Leere Daten nicht ber�cksichtigen.
@@ -323,10 +332,11 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
                         );
                         
                         $newDoc .= '<div ' . buildAttributes($mainDivAttributes) . '>';
+                        
                         $newDoc .= $this->generateTabs($ranges, 0, $graphId, $data[self::R_GANGED]);
                         $newDoc .= '<div class="rrdLoader" id="__LD' . $graphId . '"></div>';
                         $newDoc .= '<a ' . buildAttributes($linkAttributes) . '><img ' . buildAttributes($imageAttributes) . '/></a>';
-                        
+
                         $newDoc .= '</div>';
                         
                         $renderer->doc .= $newDoc;
@@ -347,6 +357,26 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
                     ));
                     $renderer->doc .= '</pre>';
                     break;
+                    
+                //-- This is a bound SVG file. They are processed by the graph.php file and embedded as images.
+                case self::RT_BOUNDSVG:
+                        $newDoc = "";
+                        
+                        $graphId = $data[self::R_NAME];
+                        $bindingSource = $data[self::R_BSOURCE];
+                        $imageURL = DOKU_BASE . 'lib/plugins/rrdgraph/graph.php?page=' . $ID . '&graph=' . $graphId . '&mode=b&bind=' . $bindingSource;
+                        
+                        $imageAttributes = array (
+                                'src' => $imageURL,
+                                'id' => '__I' . $graphId 
+                        );
+                        
+                        $newDoc .= '<img ' . buildAttributes($imageAttributes) . '/>';
+                        
+                        $renderer->doc .= $newDoc;
+                        unset($newDoc);
+                        break;
+                    
                 }
             }
         }

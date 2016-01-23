@@ -1,7 +1,7 @@
 base   rrdgraph
 author Daniel Goß
 email  developer@flashsystems.de
-date   2015-10-10
+date   2016-01-23
 name   RRD graph generator
-desc   This plugin creates graphs from RRD tool data. Uses php5-rrd to generate the images.
-url    https://github.com/FlashSystems/rrdgraph
+desc   This plugin creates graphs from RRD tool data. It allowes binding values within SVG files to RRD data as well. Uses php5-rrd to generate the images and bindings.
+url    http://www.tobedone.info/
