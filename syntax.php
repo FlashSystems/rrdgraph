@@ -17,7 +17,7 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
     const RT_GRAPH = 0;
     /** Constant that indicates that a recipe is used for inclusion in other recipes. */
     const RT_TEMPLATE = 1;
-    /** Constant that indicates that a recipe is used for a bound svg graphics. */
+    /** Constant that indicates that a recipe is used for bound svg graphics. */
     const RT_BOUNDSVG = 2;
 
     /** Array index of the graph type within the parsed recipe. */ 
@@ -312,7 +312,7 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
                         $newDoc = "";
                         
                         $graphId = $data[self::R_NAME];
-                        $imageURL = DOKU_BASE . 'lib/plugins/rrdgraph/graph.php?page=' . $ID . '&graph=' . $graphId;
+                        $imageURL = DOKU_BASE . '_media/rrdrender:' . $ID . ':' . $graphId;
                         $inflatedRecipe = $rrdGraphHelper->inflateRecipe($data[self::R_DATA]);
                         $ranges = $this->getRanges($inflatedRecipe);
                         
@@ -326,7 +326,7 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
                                 'id' => '__I' . $graphId 
                         );
                         $linkAttributes = array (
-                                'href' => $imageURL . '&mode=fs',
+                                'href' => $imageURL . '?mode=fs',
                                 'target' => 'rrdimage',
                                 'id' => '__L' . $graphId 
                         );
@@ -364,7 +364,7 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
                         
                         $graphId = $data[self::R_NAME];
                         $bindingSource = $data[self::R_BSOURCE];
-                        $imageURL = DOKU_BASE . 'lib/plugins/rrdgraph/graph.php?page=' . $ID . '&graph=' . $graphId . '&mode=b&bind=' . $bindingSource;
+                        $imageURL = DOKU_BASE . '_media/rrdrender:' . $ID . ':' . $graphId . '?mode=b&bind=' . $bindingSource;
                         
                         $imageAttributes = array (
                                 'src' => $imageURL,

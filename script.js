@@ -22,10 +22,10 @@ function rrdDoSwitchRange(graphId, rangeId)
 		loader.removeClass("rrdLoaderActive");
 	});
 	
-	var rangeFilterRegex = new RegExp("&range=[0-9]+");
+	var removeQueryRegex = new RegExp("\\?.*$");
 	
 	var imageUri = image.attr("src");
-	imageUri = imageUri.replace(rangeFilterRegex, '') + "&range=" + rangeId;
+	imageUri = imageUri.replace(removeQueryRegex, '') + "?range=" + rangeId;
 	
 	image.attr("src", imageUri);
 	link.attr("href", imageUri + "&mode=fs");

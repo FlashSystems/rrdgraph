@@ -234,7 +234,6 @@ class SvgBinding {
                     foreach ($data["data"] as $ts => $value) {                        
                         if ($lastTs != NULL) {
                           if (!is_nan($value)) {
-                              if ($value != 0) error_log($value);
                             $total += ($ts - $lastTs) * $value;
                           }
                         }
