@@ -286,7 +286,7 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
     public function render($mode, Doku_Renderer $renderer, $data) {
         global $ID;
         
-        //-- Leere Daten nicht ber�cksichtigen.
+        //-- Don't render empty data.
         if (count($data) == 0) return false;
         
         //-- Initialize the helper plugin. It contains functions that are used by the graph generator and the syntax plugin.
@@ -299,10 +299,12 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
             $renderer->meta['plugin_' . $this->getPluginName()]['dependencies'] = array_unique(array_merge($renderer->meta['plugin_' . $this->getPluginName()]['dependencies'], $rrdGraphHelper->getDependencies($data[self::R_DATA])), SORT_STRING);
         } else if ($mode == 'xhtml') {
         	//-- If xhtml is rendered. Generate the tab bar and the images.
-        	//   Every graph gehts an id that is derevied from the md5-checksum of the recipe. This way a graph with a different recipe
+        	//   Every graph gehts an id that is dereived from the md5-checksum of the recipe. This way a graph with a different recipe
         	//   gets a new and different graphId.
             $rrdGraphHelper = $this->loadHelper('rrdgraph');
             $rrdGraphHelper->storeRecipe($ID, $data[self::R_NAME], $data[self::R_DATA]);
+            
+            $mediaNamespace = $this->getConf('graph_media_namespace');
             
             if ($data[self::R_SHOW]) {
                 switch ($data[self::R_TYPE]) {
@@ -312,7 +314,7 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
                         $newDoc = "";
                         
                         $graphId = $data[self::R_NAME];
-                        $imageURL = DOKU_BASE . '_media/rrdrender:' . $ID . ':' . $graphId;
+                        $imageURL = DOKU_BASE . '_media/' . $mediaNamespace . ':' . $ID . ':' . $graphId;
                         $inflatedRecipe = $rrdGraphHelper->inflateRecipe($data[self::R_DATA]);
                         $ranges = $this->getRanges($inflatedRecipe);
                         
@@ -364,7 +366,7 @@ class syntax_plugin_rrdgraph extends DokuWiki_Syntax_Plugin {
                         
                         $graphId = $data[self::R_NAME];
                         $bindingSource = $data[self::R_BSOURCE];
-                        $imageURL = DOKU_BASE . '_media/rrdrender:' . $ID . ':' . $graphId . '?mode=b&bind=' . $bindingSource;
+                        $imageURL = DOKU_BASE . '_media/' . $mediaNamespace . ':' . $ID . ':' . $graphId . '?mode=' . helper_plugin_rrdgraph::MODE_BINDSVG . '&bind=' . $bindingSource;
                         
                         $imageAttributes = array (
                                 'src' => $imageURL,

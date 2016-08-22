@@ -6,11 +6,6 @@
  * @license MIT
  */
 
-//-- Global constants
-const MODE_GRAPH_EMBEDDED = 'e';
-const MODE_GRAPH_FULLSCREEN = 'fs';
-const MODE_BINDSVG = 'b';
-
 require_once ('inc/errorimage.php');
 require_once ('inc/rpncomputer.php');
 require_once ('inc/svgbinding.php');
@@ -243,6 +238,13 @@ class rrdgraph_image_info {
  *
  */
 class helper_plugin_rrdgraph extends DokuWiki_Plugin {
+    /** @var string Mode for embedding the graph into a rendered HTML page. */
+    const MODE_GRAPH_EMBEDDED = 'e';
+    /** @var string Mode for showing the graph fullscreen. */
+    const MODE_GRAPH_FULLSCREEN = 'fs';
+    /** @var string Mode for generating a SVG image with data binding.. */
+    const MODE_BINDSVG = 'b';    
+    
     /** @var Array Cache for already loaded and inflated recipes. This speeds up loading the same recipe multiple times on the same wiki page */ 
     private $localRecipeCache;
 
@@ -386,7 +388,7 @@ class helper_plugin_rrdgraph extends DokuWiki_Plugin {
      * @throws Exception
      * @return Ambigous <>
      */
-    public function sendRrdImage($pageId, $graphId, $rangeNr = 0, $mode = MODE_GRAPH_EMBEDDED, $bindingSource = null)
+    public function sendRrdImage($pageId, $graphId, $rangeNr = 0, $mode = helper_plugin_rrdgraph::MODE_GRAPH_EMBEDDED, $bindingSource = null)
     {
         //-- User abort must be ignored because we're building new images for the cache. If the
         //   user aborts this process, the cache may be corrupted.
@@ -397,16 +399,16 @@ class helper_plugin_rrdgraph extends DokuWiki_Plugin {
             if (auth_quickaclcheck($pageId) < AUTH_READ) throw new Exception("Access denied by ACL.");
         
             //-- Currently only fs, b and e are supported modes.
-            if (($mode != MODE_GRAPH_FULLSCREEN) && ($mode != MODE_BINDSVG)) $mode = MODE_GRAPH_EMBEDDED;
+            if (($mode != helper_plugin_rrdgraph::MODE_GRAPH_FULLSCREEN) && ($mode != helper_plugin_rrdgraph::MODE_BINDSVG)) $mode = helper_plugin_rrdgraph::MODE_GRAPH_EMBEDDED;
         
             //-- If the mode is "b" then $bindingSource must be set and accessible
-            if ($mode == MODE_BINDSVG) {
+            if ($mode == helper_plugin_rrdgraph::MODE_BINDSVG) {
                 if ($bindingSource == null) throw new Exception("Binding source missing.");
                 if (auth_quickaclcheck($bindingSource) < AUTH_READ) throw new Exception("Access denied by ACL.");
             }
             
             //-- Check if the cached image is still valid. If this is not the case, recreate it.
-            $cacheInfo = $this->getImageCacheInfo($pageId, $graphId, ($mode == MODE_BINDSVG)?"svg":"png", $rangeNr, $mode);
+            $cacheInfo = $this->getImageCacheInfo($pageId, $graphId, ($mode == helper_plugin_rrdgraph::MODE_BINDSVG)?"svg":"png", $rangeNr, $mode);
             if (! $cacheInfo->isValid()) {
         
                 //-- We found we should update the file. Upgrade our lock to an exclusive one.
@@ -423,7 +425,7 @@ class helper_plugin_rrdgraph extends DokuWiki_Plugin {
                 $rpncomp = new RPNComputer();
                 $rpncomp->addConst("true", true);
                 $rpncomp->addConst("false", false);
-                $rpncomp->addConst("fullscreen", $mode == MODE_GRAPH_FULLSCREEN);
+                $rpncomp->addConst("fullscreen", $mode == helper_plugin_rrdgraph::MODE_GRAPH_FULLSCREEN);
                 $rpncomp->addConst("range", $rangeNr);
                 $rpncomp->addConst("page", $pageId);
         
@@ -431,7 +433,7 @@ class helper_plugin_rrdgraph extends DokuWiki_Plugin {
                 $graphCommands = array ();
                 $ranges = array ();
                 $variables = array();
-                if ($mode == MODE_BINDSVG) $svgBinding = new SvgBinding();
+                if ($mode == helper_plugin_rrdgraph::MODE_BINDSVG) $svgBinding = new SvgBinding();
                 foreach ($recipe as $element) {
         
                     //-- If a condition was supplied, check it.
@@ -454,7 +456,7 @@ class helper_plugin_rrdgraph extends DokuWiki_Plugin {
                     switch (strtoupper($element[1])) {
                         //-- RANGE:[Range Name]:[Start time]:[End time]
                         case 'RANGE' :
-                            if (($mode == MODE_BINDSVG) && (count($ranges) == 1)) throw new Exception("For SVG binding only one RANGE can be specified.");
+                            if (($mode == helper_plugin_rrdgraph::MODE_BINDSVG) && (count($ranges) == 1)) throw new Exception("For SVG binding only one RANGE can be specified.");
                             $parts = explode(':', $element[2], 3);
                             if (count($parts) == 3) $ranges[] = $parts;
                             break;
@@ -483,7 +485,7 @@ class helper_plugin_rrdgraph extends DokuWiki_Plugin {
         
                             //-- BDEF:[Binding]=[Variable]:[Aggregation function]
                         case 'BDEF':
-                            if ($mode != MODE_BINDSVG) throw new Exception("BDEF only allowed if the recipe is used for binding.");
+                            if ($mode != helper_plugin_rrdgraph::MODE_BINDSVG) throw new Exception("BDEF only allowed if the recipe is used for binding.");
                             $parts = explode('=', $element[2], 2);
                             if (count($parts) != 2) throw new Exception("BDEF is missing r-value.");
                             $rparts = explode(':', $parts[1], 2);
@@ -535,7 +537,7 @@ class helper_plugin_rrdgraph extends DokuWiki_Plugin {
                 $options['end'] = $ranges[$rangeNr][2];
         
                 //-- If we're not only doing SVG-Binding some more defaults have to be set.
-                if ($mode != MODE_BINDSVG)
+                if ($mode != helper_plugin_rrdgraph::MODE_BINDSVG)
                 {
                     $options['imgformat'] = 'PNG';
                     $options['999color'] = "SHADEA#C0C0C0";
@@ -562,20 +564,20 @@ class helper_plugin_rrdgraph extends DokuWiki_Plugin {
                 
                 //-- Correct the filename of the graph in case the rangeNr was modified by the range check.
                 unset($cacheInfo);
-                $cacheInfo = $this->getImageCacheInfo($pageId, $graphId, ($mode == MODE_BINDSVG)?"svg":"png", $rangeNr, $mode);
+                $cacheInfo = $this->getImageCacheInfo($pageId, $graphId, ($mode == helper_plugin_rrdgraph::MODE_BINDSVG)?"svg":"png", $rangeNr, $mode);
         
                 //-- We've to reupgrade the lock, because we got a new cacheInfo instance.
                 $cacheInfo->UpgradeLock();
         
                 //-- Depending on the current mode create a new PNG or SVG image.
                 switch ($mode) {
-                    case MODE_GRAPH_EMBEDDED:
-                    case MODE_GRAPH_FULLSCREEN:
+                    case helper_plugin_rrdgraph::MODE_GRAPH_EMBEDDED:
+                    case helper_plugin_rrdgraph::MODE_GRAPH_FULLSCREEN:
                         //-- Render the RRD-Graph
                         if (rrd_graph($cacheInfo->getFilename(), array_merge($commandLine, $graphCommands)) === false) throw new Exception(rrd_error());
                         break;
         
-                    case MODE_BINDSVG:
+                    case helper_plugin_rrdgraph::MODE_BINDSVG:
                         $bindingSourceFile = mediaFN(cleanID($bindingSource));
                         $svgBinding->createSVG($cacheInfo->getFileName(), array_merge($commandLine, $graphCommands), $bindingSourceFile);
                         break;
@@ -583,7 +585,7 @@ class helper_plugin_rrdgraph extends DokuWiki_Plugin {
         
                 //-- Get the new cache info of the image to send the correct headers.
                 unset($cacheInfo);
-                $cacheInfo = $this->getImageCacheInfo($pageId, $graphId, ($mode == MODE_BINDSVG)?"svg":"png", $rangeNr, $mode);
+                $cacheInfo = $this->getImageCacheInfo($pageId, $graphId, ($mode == helper_plugin_rrdgraph::MODE_BINDSVG)?"svg":"png", $rangeNr, $mode);
             }
         
             if (is_file($cacheInfo->getFilename())) {
