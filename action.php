@@ -49,7 +49,7 @@ class action_plugin_rrdgraph extends DokuWiki_Action_Plugin {
      */
     private function &parseMediaPath($media)
     {
-        $parts = split(":", $media);
+        $parts = explode(":", $media);
         if (count($parts) < 3) return false;
 
         $result = new rrdMediaInfo();
