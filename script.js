@@ -1,7 +1,7 @@
 function rrdDropDownSelected(graphId, element)
 {
-	rangeId = jQuery(element).attr("value");
-	
+	rangeId = jQuery(element).val();
+
 	rrdSwitchRange(graphId, rangeId);
 }
 
@@ -10,10 +10,9 @@ function rrdDoSwitchRange(graphId, rangeId)
 	var link = jQuery("a#__L" + graphId);
 	var image = jQuery("img#__I" + graphId);
 	var loader = jQuery("div#__LD" + graphId);
-	var allOptions = jQuery("select#__T" + graphId + " option");
 	var allTabs = jQuery("ul#__T" + graphId + " li");
-	var currentOption = jQuery("option#__TI" + graphId + "X" + rangeId);
 	var currentTab = jQuery("li#__TI" + graphId + "X" + rangeId);
+	var select = jQuery("select#__T" + graphId);
 
 	image.addClass("rrdLoading");
 	loader.addClass("rrdLoaderActive");
@@ -30,9 +29,8 @@ function rrdDoSwitchRange(graphId, rangeId)
 	image.attr("src", imageUri);
 	link.attr("href", imageUri + "&mode=fs");
 	allTabs.removeClass("rrdActiveTab");
-	allOptions.attr("selected", false);
 	currentTab.addClass("rrdActiveTab");
-	currentOption.attr("selected", true);
+	select.val(rangeId);
 }
 
 function rrdSwitchRange(graphId, rangeId)
