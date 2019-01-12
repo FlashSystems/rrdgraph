@@ -194,7 +194,7 @@ class SvgBinding {
         foreach ($rrdData["data"] as $data)
         {
             //-- Only process data if we know the aggregate function
-            $bindingName = $data[legend];
+            $bindingName = $data["legend"];
             
             $data["data"] = array_filter($data["data"], function ($value) { return !is_nan($value); });
             
