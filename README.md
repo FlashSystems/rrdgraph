@@ -170,7 +170,8 @@ range,2,<?LINE:0.5#00FF00
 
 This recipe is showing an additional green line for the first two time ranges. And if the graph is clicked and is shown full screen the width is changed to 500. This is done by two different conditions. The first one is simple. If the variable `fullscreen` is true the width is overwritten by the value 500. The second example uses the RPN syntax. This syntax is described within the [RRDtool documentation](http://oss.oetiker.ch/rrdtool/doc/rrdgraph_rpn.en.html). RRDgraphs parser is much simpler than the RRDtool parser it only understands this operators:
 
-^ Operator  ^ Description ^
+| Operator | Description |
+| -------- | ----------- |
 | `|`     | Pop two elements from the stack. Perform a logical //or// operation and push the result onto the stack. |
 | `&`     | Pop two elements from the stack. Perform a logical //and// operation and push the result onto the stack. |
 | `>`     | Pop two elements from the stack and compare them. If the second element is greater than the first push back true else push back false. |
@@ -179,7 +180,8 @@ This recipe is showing an additional green line for the first two time ranges. A
 
 The RRDgraph RPN engine has some variables that contain the current state of the graph and can be used to enable or disable parts of the recipe:
 
-^ Variable ^ Content ^
+| Variable | Content |
+| -------- | ------- |
 | `true` | Always contains a true value. |
 | `false` | Always contains a false value. |
 | `fullscreen` | Contains true if the graph was clicked and is shown full screen. If the graph is shown embedded within a DokuWiki page this value contains false. |
